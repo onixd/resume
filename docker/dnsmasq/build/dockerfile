@@ -1,0 +1,26 @@
+FROM debian:buster
+LABEL maintainer="vremax@yandex.ru"
+# webproc release settings
+ENV WEBPROC_VERSION 0.2.2
+ENV WEBPROC_URL https://github.com/jpillora/webproc/releases/download/$WEBPROC_VERSION/webproc_linux_amd64.gz
+# dialog
+RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
+# fetch dnsmasq and webproc binary
+RUN apt update \
+    && apt -y install apt-utils \
+    && apt -y install dialog \
+    && apt -y install sudo \
+    && apt -y install dnsmasq \
+    && apt -y install curl \
+    && apt -y install mc \
+    && curl -sL $WEBPROC_URL | gzip -d - > /usr/local/bin/webproc \
+    && chmod +x /usr/local/bin/webproc
+# default mcedit
+COPY ini /root/.config/mc/ini
+#RUN sudo sed -i 's/use_internal_edit=false/use_internal_edit=true/' /root/.config/mc/ini
+#configure dnsmasq
+RUN mkdir -p /etc/default/
+RUN echo -e "ENABLED=1\nIGNORE_RESOLVCONF=yes" > /etc/default/dnsmasq
+COPY dnsmasq.conf /etc/dnsmasq.conf
+#run!
+ENTRYPOINT ["webproc","--config","/etc/dnsmasq.conf","--","dnsmasq","--no-daemon"]

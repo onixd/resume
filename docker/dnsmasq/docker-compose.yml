@@ -1,0 +1,28 @@
+version: '3.2'
+
+services:
+
+ dnsmasq:
+#    build: ./build
+    image: harbor.domain.ru/local_admin/dnsmasq_debian:0.1
+    container_name: dnsmasq
+    networks:
+      - dnsmasq
+    ports:
+      - 53:53/udp
+      - 5380:8080
+    volumes:
+      - /var/lib/docker/volumes/dnsmasq_data/_data/dnsmasq.conf:/etc/dnsmasq.conf
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      HTTP_USER: foo
+      HTTP_PASS: bar
+    restart: unless-stopped
+    logging:
+     driver: "syslog"
+
+volumes:
+  data:
+
+networks:
+ dnsmasq:

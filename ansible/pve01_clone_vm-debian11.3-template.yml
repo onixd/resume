@@ -1,0 +1,36 @@
+- name: Initial setup VM
+  hosts: x.x.x.x
+  tasks:
+    - name: Clone VM
+      proxmox_kvm:
+        node:         "{{ node_pve }}"
+        name:         "{{ name_vm }}"
+        api_user:     "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host:     "{{ api_host }}"
+        clone:        "{{ clone_vm }}"
+        full:         yes
+
+    - name: Get VMID
+      proxmox_kvm:
+        node:         "{{ node_pve }}"
+        name:         "{{ name_vm }}"
+        api_user:     "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host:     "{{ api_host }}"
+        state: current
+      register: result
+
+    - name: Set VMID
+      set_fact:
+        new_vmid:     "{{ result.msg | regex_replace('^.* = (\\d+).*?$', '\\1') }}"
+
+    - name: Start VM
+      proxmox_kvm:
+        node:         "{{ node_pve }}"
+        api_host:     "{{ api_host }}"
+        api_password: "{{ api_password }}"
+        api_user:     "{{ api_user }}"
+        vmid:         "{{ new_vmid }}"
+        state:        started
+
