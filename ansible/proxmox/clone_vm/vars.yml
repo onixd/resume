@@ -1,0 +1,7 @@
+"api_host":     "100.100.100.100"
+"api_user":     "root@pam"
+"api_password": "1234567890"
+"clone_vm":     "vm-debian11.3-template"
+"key_name":     "id_rsa.pub"
+"node_pve":     "pve01"
+"name_vm":      "vm-debian11.3-clonned"

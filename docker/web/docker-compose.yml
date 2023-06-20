@@ -1,0 +1,23 @@
+version: '3.2'
+
+services:
+
+ web:
+    build: ./build
+    image: web-image
+    container_name: web
+    networks:
+      - web
+    ports:
+      - 80:80
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped
+    logging:
+     driver: "syslog"
+
+#volumes:
+#  data:
+
+networks:
+ web:

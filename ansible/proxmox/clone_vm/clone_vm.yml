@@ -1,0 +1,81 @@
+# Установка sshpass на локальной машине
+- name: Install on localhost packages
+  # хост установки - localhost
+  hosts: localhost
+  tasks:
+    - name: Install sshpass
+      apt:
+        # сделать apt-update - не делать
+        update_cache: no
+        # имя пакета который будет установлен
+        name: sshpass
+        # если уже установлен - пропустить
+        state: present
+
+- name: Initial setup VM
+  # все хосты которые в hosts
+  hosts: all
+  # файл переменных
+  vars_files: ./vars.yml
+  tasks:
+    # склонировать ВМ
+    - name: Clone VM
+      proxmox_kvm:
+        node:         "{{ node_pve }}"
+        name:         "{{ name_vm }}"
+        api_user:     "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host:     "{{ api_host }}"
+        clone:        "{{ clone_vm }}"
+        full:         yes
+
+    # подождать пока ВМ склонируется
+    - name: pause for 5 seconds
+      pause:
+        seconds: 5
+
+    # получить id новой ВМ
+    - name: Get VMID
+      proxmox_kvm:
+        node:         "{{ node_pve }}"
+        name:         "{{ name_vm }}"
+        api_user:     "{{ api_user }}"
+        api_password: "{{ api_password }}"
+        api_host:     "{{ api_host }}"
+        state: current
+      register: result
+
+    # новый id в переменную
+    - name: Set VMID
+      set_fact:
+        new_vmid:     "{{ result.msg | regex_replace('^.* = (\\d+).*?$', '\\1') }}"
+
+    # запустить ВМ
+    - name: Start VM
+      proxmox_kvm:
+        node:         "{{ node_pve }}"
+        api_host:     "{{ api_host }}"
+        api_password: "{{ api_password }}"
+        api_user:     "{{ api_user }}"
+        vmid:         "{{ new_vmid }}"
+        state:        started
+
+    # подождать пока запустится
+    - name: pause for 10 seconds
+      pause:
+        seconds: 10
+
+    # получить IP новой ВМ
+    - name: Get IP VM
+      proxmox_kvm:
+        node:         "{{ node_pve }}"
+        api_host:     "{{ api_host }}"
+        api_password: "{{ api_password }}"
+        api_user:     "{{ api_user }}"
+        vmid:         "{{ new_vmid }}"
+    - shell:          qm guest cmd {{ new_vmid }} network-get-interfaces | grep 100.100.100
+      register:       result
+    - debug:
+        msg:
+          - "VmID - {{ new_vmid }}"
+          - "IP - {{ result.stdout | regex_replace('^.*.*.*.* ','') | regex_replace('[\",]','') }}"
