@@ -21,24 +21,24 @@
     # склонировать ВМ
     - name: Clone VM
       proxmox_kvm:
-        node:         "{{ node_pve }}"
-        name:         "{{ name_vm }}"
+        node:         "{{ pve_node }}"
+        name:         "{{ vm_name }}"
         api_user:     "{{ api_user }}"
         api_password: "{{ api_password }}"
         api_host:     "{{ api_host }}"
-        clone:        "{{ clone_vm }}"
+        clone:        "{{ vm_template }}"
         full:         yes
 
     # подождать пока ВМ склонируется
-    - name: pause for 5 seconds
+    - name: pause for 10 seconds
       pause:
-        seconds: 5
+        seconds: 10
 
     # получить id новой ВМ
     - name: Get VMID
       proxmox_kvm:
-        node:         "{{ node_pve }}"
-        name:         "{{ name_vm }}"
+        node:         "{{ pve_node }}"
+        name:         "{{ vm_name }}"
         api_user:     "{{ api_user }}"
         api_password: "{{ api_password }}"
         api_host:     "{{ api_host }}"
@@ -53,7 +53,7 @@
     # запустить ВМ
     - name: Start VM
       proxmox_kvm:
-        node:         "{{ node_pve }}"
+        node:         "{{ pve_node }}"
         api_host:     "{{ api_host }}"
         api_password: "{{ api_password }}"
         api_user:     "{{ api_user }}"
@@ -68,13 +68,15 @@
     # получить IP новой ВМ
     - name: Get IP VM
       proxmox_kvm:
-        node:         "{{ node_pve }}"
+        node:         "{{ pve_node }}"
         api_host:     "{{ api_host }}"
         api_password: "{{ api_password }}"
         api_user:     "{{ api_user }}"
         vmid:         "{{ new_vmid }}"
-    - shell:          qm guest cmd {{ new_vmid }} network-get-interfaces | grep 100.100.100
+    - shell:          "qm guest cmd {{ new_vmid }} network-get-interfaces | grep 10.100.50"
       register:       result
+    - set_fact:
+        ip_address:   "{{ result.stdout | regex_replace('^.*.*.*.* ','') | regex_replace('[\",]','') }}"
     - debug:
         msg:
           - "VmID - {{ new_vmid }}"
