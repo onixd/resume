@@ -1,0 +1,10 @@
+[Unit]
+# описание
+Description=Runs full backup work every week and clean old backups
+[Timer]
+# по календарю каждую субботу в 12 ночи
+OnCalendar=Sat *-*-* 00:00:00
+# какой сервис будет срабатывать
+Unit=mariadb-backup-full.service
+[Install]
+WantedBy=multi-user.target

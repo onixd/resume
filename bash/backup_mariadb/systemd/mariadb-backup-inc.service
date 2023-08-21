@@ -1,0 +1,11 @@
+[Unit]
+# описание
+Description=MariaDB incremental backup
+
+[Service]
+Type=simple
+# запустить скрипт инкрементального бэкапа
+ExecStart=/root/backup/mariadb_incremental_backup.sh
+
+[Install]
+WantedBy=multi-user.target

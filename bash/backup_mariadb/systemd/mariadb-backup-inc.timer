@@ -1,0 +1,10 @@
+[Unit]
+# описание
+Description=Runs incremental backup work every hour
+[Timer]
+# каждый час
+OnUnitActiveSec=1h
+# какой сервис будет срабатывать
+Unit=mariadb-backup-inc.service
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+# описание
+Description=MariaDB full backup and clean old
+
+[Service]
+Type=simple
+# запустить скрипт полного бэкапа
+ExecStart=/root/backup/mariadb_full_backup.sh
+# запустить скрипт очистки баз после полного бэкапа
+ExecStartPost=/root/backup/mariadb_clean_old_backup.sh
+
+[Install]
+WantedBy=multi-user.target
