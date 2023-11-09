@@ -1,0 +1,8 @@
+# список продовых машин, сколько угодно prod1, prod2, prod3 и т.д.
+[prod]
+prod1 ansible_ssh_host=10.10.10.10 ansible_user=root ansible_password=123456
+prod2 ansible_ssh_host=10.10.10.20 ansible_user=root ansible_password=123456
+
+# хранилище собранных инсталлеров
+[storage]
+storage1 ansible_ssh_host=10.10.10.100 ansible_user=root ansible_password=123456

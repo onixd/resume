@@ -1,0 +1,18 @@
+# путь к инсталлеру в хранилище
+"inst_path_src":         "/storage/installers/builded/debian/11/pve"
+# имя инсталлера для онлайн установки (чтобы не копировать огромный оффлайн)
+"inst_name_online":      "pve1.029-online.sh"
+# имя инсталлера для оффлайн установки
+"inst_name_offline":     "pve1.029-debian11.3-full-19.05.23.sh"
+# имя фриза
+"inst_freeze_name":      "freeze.txt"
+# каталог на продовой машине куда скопируется инсталлер
+"inst_path_dst":         "/root/install"
+# ip адресса хранилищ собранных инсталлеров
+"storage_ip1":           "10.100.50.84"
+# папка установки сервиса
+"service_path":          "/opt/pve"
+# имя устанавливаемого сервиса
+"service_name":          "pve"
+# режим установки offline/online
+"mode":                  "online"

@@ -1,0 +1,216 @@
+# Установка пакетов на машине где запускается плэйбук
+- name:                         Install packages on localhost
+  # хост установки - localhost
+  hosts:                        localhost
+  tasks:
+    - name:                     Install sshpass
+      apt:
+        # сделать apt-update - не делать
+        update_cache:           no
+        # имя пакета который будет установлен
+        name:                   sshpass
+        # если уже установлен - пропустить
+        state:                  present
+
+# -----------------------------------------------------------------------------------------
+
+# Установка пакетов на хранилище
+- name:                             Install packages on storage
+  # хост установки - storage
+  hosts:                            storage
+  # файл переменных
+  vars_files:                       ./vars.yml
+  vars:
+    freeze:                   false
+  tasks:
+    - block:
+        - name:                     Install rsync,sshpass
+          apt:
+            # сделать apt-update - не делать
+            update_cache:           no
+            # имя пакета который будет установлен
+            name:                   rsync, sshpass
+            # если уже установлен - пропустить
+            state:                  present
+
+      # проверить есть ли фриз на сторадже, если нет
+    - block:
+        - name:                     Check if freeze exists on storage
+          stat:
+            # файл который проверять
+            path:                   "{{ inst_path_src }}/{{ inst_freeze_name }}"
+          register:                 freeze_check
+
+        - name:                     Set var
+        - set_fact:
+            freeze:                 "{{ freeze_check.stat.exists }}"
+
+        - debug:
+            msg:
+              -                     "{{ inst_freeze_name }} - нет на storage в папке с установщиком, будет использован внутренний список pip инсталлятора"
+      # если режим онлайн и нет фриза
+      when:
+        -                           "mode == 'online'"
+        -                           freeze|bool == false
+
+    # проверить есть ли фриз на сторадже, если есть
+  - block:
+      - name:                   Check if freeze exists on storage
+        stat:
+          # файл который проверять
+          path:                 "{{ inst_path_src }}/{{ inst_freeze_name }}"
+          register:               freeze_check
+      - debug:
+          msg:
+            -                   "{{ inst_freeze_name }} - есть на storage в папке с установщиком, будет использован внешний файл pip модулей"
+      # если режим онлайн и есть фриз
+    when:
+      -                       "mode == 'online'"
+      -                       freeze.stat.exists == true
+
+# Установка критических пакетов на продовой машине, если есть интернет
+- name:                         Prepare prod
+  # хост установки - все продовые
+  hosts:                        prod
+  # файл переменных
+  vars_files:                   ./vars.yml
+  gather_facts:                 no
+  tasks:
+    # установка python на продовой машине, отключена сборка фактов так как ансибл без питона не работает
+    - name:                     Install python
+      raw:                      apt -y update && apt install -y python3
+
+# Установка пакетов, копирование инсталлера, установка сервиса
+- name:                         Install packages, copy, install service
+  # хост установки - все продовые
+  hosts:                        prod
+  # файл переменных
+  vars_files:                   ./vars.yml
+  tasks:
+    # установка пакетов на продовых машинах, если есть интернет
+    - name:                     Install rsync,sshpass on prod
+      apt:
+        # сделать apt update - не делать
+        update_cache:           no
+        # имя пакета который будет установлен
+        name:                   rsync, sshpass
+        # если уже установлен - пропустить
+        state:                  present
+
+    # создание папок на продовых машинах
+    - name:                     Create dirs on prod
+      file:
+        # создать каталог куда скопируется инсталлер
+        path:                   "{{ inst_path_dst }}"
+        state:                  directory
+        owner:                  root
+        group:                  root
+        mode:                   777
+
+    # скопировать фриз для онлайн инсталлера на продовую машину
+    - block:
+      - name:                   Copy online installer freeze from storage to prod
+        synchronize:
+          dest:                 "{{ inst_path_dst }}"
+          src:                  "{{ item }}"
+          mode:                 push
+        with_items:
+          -                     "{{ inst_path_src }}/{{ inst_freeze_name }}"
+        # хост с которого скопируется
+        delegate_to:            storage1
+      - debug:
+          msg:
+            -                   "Фриз скопирован на прод"
+      when:
+        -                       "mode == 'online'"
+        -                       hostvars['storage']['freeze.stat.exists'] is defined
+
+    # скопировать онлайн инсталлер на продовую машину
+    - block:
+      - name:                   Copy online installer from storage to prod
+        synchronize:
+          dest:                 "{{ inst_path_dst }}"
+          src:                  "{{ item }}"
+          mode:                 push
+        # файлы которые скопировать
+        with_items:
+          -                     "{{ inst_path_src }}/{{ inst_name_online }}"
+        # хост с которого скопируется
+        delegate_to:            storage1
+      - debug:
+          msg:
+            -                   "Онлайн инсталлер скопирован на прод"
+      when:
+        -                       "mode == 'online'"
+
+    # скопировать собранный оффлайн инсталлер на продовую машину
+    - block:
+      - name:                   Copy offline installer from storage to prod
+        synchronize:
+          dest:                 "{{ inst_path_dst }}"
+          src:                  "{{ item }}"
+          mode:                 push
+        # файлы которые скопировать
+        with_items:
+          -                     "{{ inst_path_src }}/{{ inst_name_offline }}"
+        # хост с которого скопируется
+        delegate_to:            storage1
+      - debug:
+          msg:
+            -                   "Оффлайн инсталлер скопирован на прод"
+      when:
+        -                       "mode == 'offline'"
+
+    # проверить установлен ли сервис на целевых машинах, проверка наличия директории сервиса
+    - block:
+      - name:                   Check if service {{ service_name }} installed on prod
+        stat:
+          # директория которую проверять
+          path:                 "{{ service_path }}"
+        register:                 directory
+      - debug:
+          msg:
+            -                   "{{ service_path }} - уже есть на сервере, удалите сервис вручную и запустите плэйбук заново"
+      when:
+        -                       directory.stat.exists == true
+
+#    # установить сервис из инсталлера
+#    - block:
+#      - name:                   Install {{ service_name }} online on prod
+#        shell:
+#          # запустить команду в shell
+#          cmd:                  "{{ inst_path_dst }}/{{ inst_name_online }} -i -f -on"
+#        register:               result
+#      - shell:
+#          # запустить команду в shell
+#          cmd:                  "{{ inst_path_dst }}/{{ inst_name_online }} -i -f -on"
+#        when:                   result.stdout == "скрипт был переименован, запустите ещё раз"
+#        register:               script
+#      - debug:
+#          msg:
+#            -                   "{{ result.stdout }}"
+#            -                   "{{ script.stdout }}"
+#      # если директории установленного сервиса нет и режим онлайн
+#      when:
+#        -                       directory.stat.exists == false
+#        -                       mode == "online"
+#
+#    - block:
+#      - name:                   Install {{ service_name }} offline on prod
+#        shell:
+#          # запустить команду в shell
+#          cmd:                  "{{ inst_path_dst }}/{{ inst_name_offline }} -i -off"
+#        register:               result
+#      - shell:
+#          # запустить команду в shell
+#          cmd:                  "{{ inst_path_dst }}/{{ inst_name_offline }} -i -off"
+#        when:                   result.stdout == "скрипт был переименован, запустите ещё раз"
+#        register:               script
+#      - debug:
+#          msg:
+#            -                   "{{ result.stdout }}"
+#            -                   "{{ script.stdout }}"
+#      # если директории установленного сервиса нет и режим оффлайн
+#      when:
+#        -                       directory.stat.exists == false
+#        -                       mode == "offline"

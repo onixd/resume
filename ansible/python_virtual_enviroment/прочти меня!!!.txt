@@ -1,0 +1,2 @@
+Запуск плэйбука с любой машины:
+ansible-playbook ./pve.yml -i ./hosts -e "mode=online"
